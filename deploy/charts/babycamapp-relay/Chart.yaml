@@ -4,8 +4,8 @@ description: >-
   Minimal HTTP relay for cross-network WebRTC reconnect signaling. Ephemeral
   blind-mailbox for AES-256-GCM encrypted SDP blob exchange.
 type: application
-version: 0.1.1
-appVersion: 0.1.1
+version: 1.0.0
+appVersion: 1.0.0
 keywords:
   - webrtc
   - signaling
