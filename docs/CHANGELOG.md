@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/chronolite-technologies/babycamapp-relay/compare/v1.0.0...v1.1.0) (2026-03-04)
+
+
+### Features
+
+* **helm:** add nginx TLS sidecar for per-client rate limiting ([9ad6057](https://github.com/chronolite-technologies/babycamapp-relay/commit/9ad60572ba845bfda0ca6962f174bb8ce2f4a306))
+
 ## [1.0.0](https://github.com/chronolite-technologies/babycamapp-relay/compare/v0.1.1...v1.0.0) (2026-03-04)
 
 
