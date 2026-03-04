@@ -1,3 +1,3 @@
-module github.com/chronolite-technologies/babycam-relay
+module github.com/chronolite-technologies/babycamapp-relay
 
 go 1.22
