@@ -55,6 +55,15 @@ spec:
         {{- if .Values.tlsSidecar.enabled }}
         - name: tls-proxy
           image: "{{ .Values.tlsSidecar.image }}"
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            capabilities:
+              drop:
+                - ALL
           ports:
             - name: https
               containerPort: {{ .Values.tlsSidecar.port }}
@@ -67,6 +76,12 @@ spec:
             - name: tls-certs
               mountPath: /etc/nginx/tls
               readOnly: true
+            - name: nginx-tmp
+              mountPath: /tmp
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
           resources:
             {{- toYaml .Values.tlsSidecar.resources | nindent 12 }}
           readinessProbe:
@@ -89,6 +104,15 @@ spec:
           secret:
             secretName: {{ .Values.tlsSidecar.tlsSecretName }}
             optional: true
+        - name: nginx-tmp
+          emptyDir:
+            sizeLimit: 8Mi
+        - name: nginx-cache
+          emptyDir:
+            sizeLimit: 8Mi
+        - name: nginx-run
+          emptyDir:
+            sizeLimit: 1Mi
       {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

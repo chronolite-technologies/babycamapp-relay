@@ -7,8 +7,14 @@ metadata:
     {{- include "babycamapp-relay.labels" . | nindent 4 }}
 data:
   nginx.conf: |
+    pid /var/run/nginx.pid;
     events { worker_connections 64; }
     http {
+      client_body_temp_path /tmp/client_body;
+      proxy_temp_path /tmp/proxy;
+      fastcgi_temp_path /tmp/fastcgi;
+      uwsgi_temp_path /tmp/uwsgi;
+      scgi_temp_path /tmp/scgi;
       server {
         listen {{ .Values.tlsSidecar.port }} ssl;
         server_name {{ .Values.tlsSidecar.serverName }};
