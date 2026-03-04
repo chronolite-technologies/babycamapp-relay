@@ -24,6 +24,7 @@ type Config struct {
 	TTL       time.Duration
 	MaxBody   int64
 	RateLimit float64 // requests per minute per IP
+	MaxRooms  int     // max concurrent rooms
 }
 
 func loadConfig() Config {
@@ -32,6 +33,7 @@ func loadConfig() Config {
 		TTL:       time.Duration(envIntOrDefault("RELAY_TTL", 120)) * time.Second,
 		MaxBody:   int64(envIntOrDefault("RELAY_MAX_BODY", 16384)),
 		RateLimit: float64(envIntOrDefault("RELAY_RATE_LIMIT", 10)),
+		MaxRooms:  envIntOrDefault("RELAY_MAX_ROOMS", 128),
 	}
 }
 
@@ -222,6 +224,13 @@ func (s *Server) handlePut(w http.ResponseWriter, r *http.Request, roomID, slot 
 	s.mu.Lock()
 	room, exists := s.rooms[roomID]
 	if !exists {
+		// Reject if max rooms reached
+		if len(s.rooms) >= s.config.MaxRooms {
+			s.mu.Unlock()
+			log.Printf("MAX_ROOMS roomId=%s… limit=%d", roomID[:8], s.config.MaxRooms)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
 		room = &Room{}
 		s.rooms[roomID] = room
 	}
@@ -237,19 +246,25 @@ func (s *Server) handlePut(w http.ResponseWriter, r *http.Request, roomID, slot 
 	w.WriteHeader(http.StatusCreated)
 }
 
-// handleGet retrieves encrypted SDP data from the specified slot.
+// handleGet retrieves encrypted SDP data from the specified slot and deletes it immediately.
 func (s *Server) handleGet(w http.ResponseWriter, _ *http.Request, roomID, slot string) {
-	s.mu.RLock()
+	s.mu.Lock()
 	room, exists := s.rooms[roomID]
 	var entry *Slot
 	if exists {
 		if slot == "offer" {
 			entry = room.Offer
+			room.Offer = nil
 		} else {
 			entry = room.Answer
+			room.Answer = nil
+		}
+		// Remove room if both slots are now empty
+		if room.Offer == nil && room.Answer == nil {
+			delete(s.rooms, roomID)
 		}
 	}
-	s.mu.RUnlock()
+	s.mu.Unlock()
 
 	if entry == nil {
 		log.Printf("GET %s roomId=%s… status=204", slot, roomID[:8])

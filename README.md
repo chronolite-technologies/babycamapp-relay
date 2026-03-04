@@ -36,14 +36,19 @@ The relay server is a "blind mailbox" — it only stores opaque encrypted blobs 
 | `GET` | `/v1/signal/{roomId}/answer` | Retrieve SDP answer | `200` + body / `204` |
 | `GET` | `/health` | Health check | `200 "ok"` |
 
-**Error responses:** `400` (invalid input), `405` (wrong method), `413` (body > 16 KB), `429` (rate limited)
+**Error responses:** `400` (invalid input), `405` (wrong method), `413` (body > 16 KB), `429` (rate limited), `503` (max rooms reached)
 
 **Constraints:**
 - `roomId`: exactly 32 lowercase hex characters
 - `slot`: `"offer"` or `"answer"` only
 - Max payload: 16 KB
-- Room TTL: 120 seconds (auto-deleted)
 - Rate limit: 10 requests/minute/IP
+
+**Data lifecycle:**
+- Slots are **deleted immediately** after the first successful GET (one-time retrieval)
+- If a room has both slots empty after retrieval, the entire room is removed from memory
+- Unread slots are automatically cleaned up after **120 seconds** (TTL) as a safety net
+- Nothing is persisted to disk — all data is in-memory only
 
 ## Build & Run
 
@@ -71,6 +76,7 @@ All configuration via environment variables:
 | `RELAY_TTL` | `120` | Room TTL in seconds |
 | `RELAY_MAX_BODY` | `16384` | Max payload in bytes |
 | `RELAY_RATE_LIMIT` | `10` | Requests per minute per IP |
+| `RELAY_MAX_ROOMS` | `128` | Max concurrent rooms |
 
 ## Deployment
 
@@ -92,7 +98,7 @@ sudo systemctl enable --now babycam-relay
 
 - **No authentication needed** — room IDs are 128-bit hashes derived from shared secrets (brute-force resistant)
 - **End-to-end encrypted** — server only sees AES-256-GCM ciphertext
-- **Ephemeral** — all data auto-deleted after 120s
+- **Ephemeral** — data deleted on first read, unread data auto-deleted after 120s
 - **Rate limited** — 10 req/min/IP, `X-Forwarded-For` trusted only from loopback
 - **No logging of room contents** — only metadata (room ID prefix, size, status code)
 - **Zero external dependencies** — Go standard library only

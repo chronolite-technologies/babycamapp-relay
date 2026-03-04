@@ -20,6 +20,7 @@ func testServer() *Server {
 		TTL:       120 * time.Second,
 		MaxBody:   16384,
 		RateLimit: 100, // high limit so rate limiting doesn't interfere with most tests
+		MaxRooms:  128,
 	}
 	return NewServer(cfg)
 }
@@ -67,6 +68,47 @@ func TestGetEmptySlot(t *testing.T) {
 	w := getSlot(t, srv, validRoomID, "offer")
 	if w.Code != http.StatusNoContent {
 		t.Fatalf("GET empty: expected 204, got %d", w.Code)
+	}
+}
+
+func TestGetDeletesSlotAfterRetrieval(t *testing.T) {
+	srv := testServer()
+	payload := []byte("one-time-sdp-data")
+
+	putSlot(t, srv, validRoomID, "offer", payload)
+
+	// First GET returns data
+	w := getSlot(t, srv, validRoomID, "offer")
+	if w.Code != http.StatusOK {
+		t.Fatalf("first GET: expected 200, got %d", w.Code)
+	}
+	if !bytes.Equal(w.Body.Bytes(), payload) {
+		t.Fatalf("first GET: body mismatch")
+	}
+
+	// Second GET returns 204 — data was deleted after first retrieval
+	w = getSlot(t, srv, validRoomID, "offer")
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("second GET: expected 204 (deleted after retrieval), got %d", w.Code)
+	}
+}
+
+func TestGetDeletesRoomWhenBothSlotsRetrieved(t *testing.T) {
+	srv := testServer()
+
+	putSlot(t, srv, validRoomID, "offer", []byte("offer-data"))
+	putSlot(t, srv, validRoomID, "answer", []byte("answer-data"))
+
+	// Retrieve both slots
+	getSlot(t, srv, validRoomID, "offer")
+	getSlot(t, srv, validRoomID, "answer")
+
+	// Room should be completely removed from memory
+	srv.mu.RLock()
+	_, exists := srv.rooms[validRoomID]
+	srv.mu.RUnlock()
+	if exists {
+		t.Fatal("room should have been deleted after both slots were retrieved")
 	}
 }
 
@@ -233,6 +275,7 @@ func TestRateLimiting(t *testing.T) {
 		TTL:       120 * time.Second,
 		MaxBody:   16384,
 		RateLimit: 5, // 5 requests per minute for easy testing
+		MaxRooms:  128,
 	}
 	srv := NewServer(cfg)
 	payload := []byte("test-rate-limit")
@@ -281,6 +324,44 @@ func TestIndependentRooms(t *testing.T) {
 	}
 }
 
+func TestMaxRoomsLimit(t *testing.T) {
+	cfg := Config{
+		Port:      "8080",
+		TTL:       120 * time.Second,
+		MaxBody:   16384,
+		RateLimit: 1000,
+		MaxRooms:  3,
+	}
+	srv := NewServer(cfg)
+	payload := []byte("test")
+
+	// Fill up to max rooms
+	putSlot(t, srv, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1", "offer", payload)
+	putSlot(t, srv, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb2", "offer", payload)
+	putSlot(t, srv, "ccccccccccccccccccccccccccccccc3", "offer", payload)
+
+	// 4th room should be rejected with 503
+	w := putSlot(t, srv, "ddddddddddddddddddddddddddddddd4", "offer", payload)
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("4th room: expected 503, got %d", w.Code)
+	}
+
+	// PUT to existing room should still work
+	w = putSlot(t, srv, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1", "answer", payload)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("existing room: expected 201, got %d", w.Code)
+	}
+
+	// After retrieving both slots from room A (auto-deletes), a new room should be allowed
+	getSlot(t, srv, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1", "offer")
+	getSlot(t, srv, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1", "answer")
+
+	w = putSlot(t, srv, "ddddddddddddddddddddddddddddddd4", "offer", payload)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("after room freed: expected 201, got %d", w.Code)
+	}
+}
+
 func TestEmptyPutBody(t *testing.T) {
 	srv := testServer()
 
@@ -322,6 +403,7 @@ func TestXForwardedForFromTrustedProxy(t *testing.T) {
 		TTL:       120 * time.Second,
 		MaxBody:   16384,
 		RateLimit: 3,
+		MaxRooms:  128,
 	}
 	srv := NewServer(cfg)
 	payload := []byte("test")
@@ -362,6 +444,7 @@ func TestXForwardedForFromUntrustedClient(t *testing.T) {
 		TTL:       120 * time.Second,
 		MaxBody:   16384,
 		RateLimit: 3,
+		MaxRooms:  128,
 	}
 	srv := NewServer(cfg)
 	payload := []byte("test")
