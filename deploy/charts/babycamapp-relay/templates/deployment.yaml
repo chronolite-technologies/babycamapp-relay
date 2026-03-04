@@ -35,7 +35,7 @@ spec:
           {{- end }}
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: {{ .Values.env.RELAY_PORT | default "8080" }}
               protocol: TCP
           envFrom:
             - configMapRef:
@@ -52,6 +52,44 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+        {{- if .Values.tlsSidecar.enabled }}
+        - name: tls-proxy
+          image: "{{ .Values.tlsSidecar.image }}"
+          ports:
+            - name: https
+              containerPort: {{ .Values.tlsSidecar.port }}
+              protocol: TCP
+          volumeMounts:
+            - name: tls-proxy-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
+            - name: tls-certs
+              mountPath: /etc/nginx/tls
+              readOnly: true
+          resources:
+            {{- toYaml .Values.tlsSidecar.resources | nindent 12 }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.tlsSidecar.port }}
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.tlsSidecar.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 30
+        {{- end }}
+      {{- if .Values.tlsSidecar.enabled }}
+      volumes:
+        - name: tls-proxy-config
+          configMap:
+            name: {{ include "babycamapp-relay.fullname" . }}-tls-proxy
+        - name: tls-certs
+          secret:
+            secretName: {{ .Values.tlsSidecar.tlsSecretName }}
+            optional: true
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

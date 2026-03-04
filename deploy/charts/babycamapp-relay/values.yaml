@@ -30,14 +30,14 @@ ingress:
   className: ""
   annotations: {}
   hosts:
-    - host: relay.example.com
+    - host: reconnect.example.com
       paths:
         - path: /
           pathType: Prefix
   tls: []
   #  - secretName: relay-tls
   #    hosts:
-  #      - relay.example.com
+  #      - reconnect.example.com
 
 # ── Health Checks ──────────────────────────────────────────────────────────
 readinessProbe:
@@ -84,6 +84,24 @@ serviceAccount:
   create: true
   annotations: {}
   name: ""
+
+# ── TLS Sidecar (nginx TLS termination in same pod) ──────────────────────
+# When enabled, an nginx sidecar terminates TLS and proxies to the Go server
+# on 127.0.0.1. This ensures X-Forwarded-For contains the real client IP
+# (trusted because RemoteAddr = 127.0.0.1).
+tlsSidecar:
+  enabled: false
+  image: nginx:1.27-alpine
+  port: 8443
+  serverName: reconnect.example.com
+  tlsSecretName: relay-tls
+  resources:
+    requests:
+      cpu: 25m
+      memory: 16Mi
+    limits:
+      cpu: 100m
+      memory: 32Mi
 
 # ── Node Scheduling ───────────────────────────────────────────────────────
 nodeSelector: {}
