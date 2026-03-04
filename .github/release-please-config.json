@@ -1,0 +1,30 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "go",
+      "changelog-path": "docs/CHANGELOG.md",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "changelog-sections": [
+        { "type": "feat", "section": "Features" },
+        { "type": "fix", "section": "Bug Fixes" },
+        { "type": "perf", "section": "Performance" },
+        { "type": "docs", "section": "Documentation" },
+        { "type": "chore", "section": "Miscellaneous" }
+      ],
+      "extra-files": [
+        {
+          "type": "yaml",
+          "path": "deploy/charts/babycamapp-relay/Chart.yaml",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "yaml",
+          "path": "deploy/charts/babycamapp-relay/Chart.yaml",
+          "jsonpath": "$.appVersion"
+        }
+      ]
+    }
+  },
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
+}

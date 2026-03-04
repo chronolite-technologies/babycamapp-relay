@@ -1,0 +1,19 @@
+apiVersion: v2
+name: babycamapp-relay
+description: >-
+  Minimal HTTP relay for cross-network WebRTC reconnect signaling.
+  Ephemeral blind-mailbox for AES-256-GCM encrypted SDP blob exchange.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - webrtc
+  - signaling
+  - relay
+  - babycam
+home: https://github.com/chronolite-technologies/babycamapp-relay
+sources:
+  - https://github.com/chronolite-technologies/babycamapp-relay
+maintainers:
+  - name: chronolite-technologies
+    url: https://github.com/chronolite-technologies

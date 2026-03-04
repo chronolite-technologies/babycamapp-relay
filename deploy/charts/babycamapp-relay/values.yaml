@@ -1,0 +1,91 @@
+# babycamapp-relay Helm Chart Values
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/chronolite-technologies/babycamapp-relay
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+
+# ── Application Environment ────────────────────────────────────────────────
+env:
+  RELAY_PORT: "8080"
+  RELAY_TTL: "120"
+  RELAY_MAX_BODY: "16384"
+  RELAY_RATE_LIMIT: "10"
+  RELAY_MAX_ROOMS: "128"
+
+# ── Ingress ────────────────────────────────────────────────────────────────
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: relay.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: relay-tls
+  #    hosts:
+  #      - relay.example.com
+
+# ── Health Checks ──────────────────────────────────────────────────────────
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 2
+  periodSeconds: 10
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 15
+
+# ── Resources ──────────────────────────────────────────────────────────────
+# Aligned with systemd MemoryMax=64M constraint
+resources:
+  requests:
+    cpu: 50m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 64Mi
+
+# ── Security Context (pod level) ──────────────────────────────────────────
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  runAsGroup: 65534
+  fsGroup: 65534
+
+# ── Security Context (container level) ────────────────────────────────────
+securityContext:
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+# ── Service Account ───────────────────────────────────────────────────────
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# ── Node Scheduling ───────────────────────────────────────────────────────
+nodeSelector: {}
+tolerations: []
+affinity: {}
