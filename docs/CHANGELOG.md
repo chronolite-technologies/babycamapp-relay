@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/chronolite-technologies/babycamapp-relay/compare/v1.1.0...v1.1.1) (2026-03-04)
+
+
+### Bug Fixes
+
+* **helm:** nginx sidecar security context + writable tmp dirs ([059385c](https://github.com/chronolite-technologies/babycamapp-relay/commit/059385c213afa250980fbc7cf78dd6adc8bd23e3))
+
 ## [1.1.0](https://github.com/chronolite-technologies/babycamapp-relay/compare/v1.0.0...v1.1.0) (2026-03-04)
 
 
