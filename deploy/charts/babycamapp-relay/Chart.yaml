@@ -1,11 +1,11 @@
 apiVersion: v2
 name: babycamapp-relay
 description: >-
-  Minimal HTTP relay for cross-network WebRTC reconnect signaling.
-  Ephemeral blind-mailbox for AES-256-GCM encrypted SDP blob exchange.
+  Minimal HTTP relay for cross-network WebRTC reconnect signaling. Ephemeral
+  blind-mailbox for AES-256-GCM encrypted SDP blob exchange.
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.1.1
+appVersion: 0.1.1
 keywords:
   - webrtc
   - signaling
